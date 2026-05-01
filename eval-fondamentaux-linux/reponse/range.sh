@@ -8,19 +8,26 @@ if [[ -z "$folder" || ! -d "$folder" ]]; then
 	exit 1
 fi
 
-#creation dossier
+#creation dossier + cp content
 mkdir -p range/{logs,csv,textes,images,divers}
-
-#cp tt fichiers desorde -> range -> arrange them
 cp -vR ../desordre/* range/
 
-#mv file to correct dir
 find range -type f | while read -r file; do
-	#regex to get all file types and count them(debug)
-	find range -type f | awk -F. 'NF>1 {print tolower($NF)}' | sort | uniq -c
+	#format file
+	new="$file"
 
-	shopt -s nocasematch
+	#lowercase, remove (), turn space to _
+	new="${new,,}"
+	new="${new//[()]/}"
+	new="${new// /_}"
+	new="$(sed 's/_\+/_/g' <<< "$new")"
 
+	if [[ "$file" != "$new" ]]; then
+		mv "$file" "$new"
+		file="$new"
+	fi	
+
+	#mv files
 	if [[ "$file" =~ \.log$ ]]; then
 		mv "$file" range/logs/		
 	elif [[ "$file" =~ \.csv$ ]]; then
@@ -32,6 +39,4 @@ find range -type f | while read -r file; do
 	else
 		mv "$file" range/divers/
 	fi
-
-	shopt -u nocasematch
 done

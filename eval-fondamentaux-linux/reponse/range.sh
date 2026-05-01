@@ -1,5 +1,4 @@
-#i!/bin/bash
-
+#!/bin/bash
 
 folder=$@
 
@@ -8,14 +7,23 @@ if [[ -z "$folder" || ! -d "$folder" ]]; then
 	exit 1
 fi
 
+base_dir="range"
+
 #creation dossier + cp content
-mkdir -p range/{logs,csv,textes,images,divers}
-cp -vR ../desordre/* range/
+mkdir -p "$base_dir"/{logs,csv,textes,images,divers}
 
-find range -type f -print0 | while IFS= read -r -d '' file; do
+logs=0
+csv=0
+textes=0
+images=0
+divers=0
 
+move_files=$(mktemp)
+
+while IFS= read -r -d '' file; do
 	#format file
-	new="$file"
+	base="$(basename "$file")"
+	new="$base"
 
 	#lowercase, remove (), turn space to _, avoid repeat ___ 
 	new="${new,,}"
@@ -23,22 +31,27 @@ find range -type f -print0 | while IFS= read -r -d '' file; do
 	new="${new// /_}"
 	new="$(sed 's/_\+/_/g' <<< "$new")"
 
-	if [[ "$file" != "$new" ]]; then
-		mv "$file" "$new"
-		file="$new"
+	if [[ "$base" != "$new" ]]; then
+		mv "$file" "$(dirname "$file")/$new"
+		file="$(dirname "$file")/$new"
 	fi	
 
 	#mv files
-	if [[ "$file" =~ \.log$ ]]; then
-		dir="range/logs/"		
-	elif [[ "$file" =~ \.csv$ ]]; then
-		dir="range/csv/"
-	elif [[ "$file" =~ \.(txt|md)$ ]]; then
-		dir="range/textes/"
-	elif [[ "$file" =~ \.(png|jpg|jpeg)$ ]]; then
-		dir="range/images/"
+	if [[ "$new" =~ \.log$ ]]; then
+		dir="$base_dir/logs/"		
+		((logs++))
+	elif [[ "$new" =~ \.csv$ ]]; then
+		dir="$base_dir/csv/"
+		((csv++))
+	elif [[ "$new" =~ \.(txt|md)$ ]]; then
+		dir="$base_dir/textes/"
+		((textes++))
+	elif [[ "$new" =~ \.(png|jpg|jpeg)$ ]]; then
+		dir="$base_dir/images/"
+		((images++))
 	else
-		dir="range/divers/"
+		dir="$base_dir/divers/"
+		((divers++))
 	fi
 
 	#persistance n numbers or sumn
@@ -61,4 +74,38 @@ find range -type f -print0 | while IFS= read -r -d '' file; do
 		((i++))
 	done
 	mv "$file" "$target"
-done
+	echo "- $file -> $target" >> "$move_files"
+done < <(find "$folder" -type f -print0)
+
+#marking down the markdown file
+base_dir="range"
+mkdir -p "$base_dir"
+
+cat > "$base_dir/rapport.md" <<EOF
+#Rapport de rangement
+
+-Date : $(date +"%d/%m/%Y %H:%M:%S")
+-source : $folder
+
+#Repartition
+
+| Catégorie | Nombre |
+| --- | ---: |
+| logs | $logs |
+| csv | $csv |
+| textes | $textes |
+| images | $images |
+| divers | $divers |
+
+Total : $((logs + csv + textes + images + divers)) fichiers
+
+#Deplacements
+
+$(cat "$move_files")
+EOF
+
+rm "$move_files"
+
+
+
+

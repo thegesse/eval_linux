@@ -1,5 +1,6 @@
 #!/bin/bash
 
+trap 'echo "Erreur script ou script interrompu" >&2' INT TERM
 folder=$@
 
 if [[ -z "$folder" || ! -d "$folder" ]]; then

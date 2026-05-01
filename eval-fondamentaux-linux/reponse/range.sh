@@ -12,21 +12,26 @@ fi
 mkdir -p range/{logs,csv,textes,images,divers}
 
 #cp tt fichiers desorde -> range -> arrange them
-#-v for debug
 cp -vR ../desordre/* range/
 
 #mv file to correct dir
-
-while find range -mindepth 1 -type f | grep -q .; do
+find range -type f | while read -r file; do
 	#regex to get all file types and count them(debug)
 	find range -type f | awk -F. 'NF>1 {print tolower($NF)}' | sort | uniq -c
 
-#TODO fix here
+	shopt -s nocasematch
 
-	ext="${file##*.}"
-	ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+	if [[ "$file" =~ \.log$ ]]; then
+		mv "$file" range/logs/		
+	elif [[ "$file" =~ \.csv$ ]]; then
+		mv "$file" range/csv/
+	elif [[ "$file" =~ \.(txt|md)$ ]]; then
+		mv "$file" range/textes/
+	elif [[ "$file" =~ \.(png|jpg|jpeg)$ ]]; then
+		mv "$file" range/images/
+	else
+		mv "$file" range/divers/
+	fi
 
-	if [[ "$ext" == "png" ]]; then
-
-	break
+	shopt -u nocasematch
 done
